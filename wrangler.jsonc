@@ -23,13 +23,11 @@
       },
     ],
   },
+  "logpush": true,
   "migrations": [
     {
       "tag": "v1",
       "new_sqlite_classes": ["Chat"],
-    },
-    {
-      "tag": "v1",
       "new_classes": ["Neo4jCacheDO"],
     },
   ],
