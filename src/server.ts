@@ -6,7 +6,7 @@ import {
   type Schedule,
 } from "agents";
 
-import { type Env, setEnv, global_env } from "./env";
+import { type Env } from "./env";
 export { Neo4jCacheDO } from "./do";
 export { Chat } from "./chatagent";
 import { experimental_createMCPClient as createMCPClient } from "ai";
@@ -16,23 +16,22 @@ import { experimental_createMCPClient as createMCPClient } from "ai";
  */
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    const mcpClient = await createMCPClient({
-      transport: {
-        type: "sse",
-        url: "http://localhost:50729/sse",
-      },
-    });
+    // const mcpClient = await createMCPClient({
+    //   transport: {
+    //     type: "sse",
+    //     url: "https://yrifi-mcp-server.yirifi-ai.workers.dev/sse",
+    //   },
+    // });
 
-    const xtools = await mcpClient.tools();
-    setEnv({ ...env, xtools });
-    console.log(
-      "asd>",
-      global_env.xtools.add.execute,
-      await global_env.xtools.add.execute(
-        { a: 12, b: 233 },
-        { messages: [], toolCallId: "1" }
-      )
-    );
+    // const xtools = await mcpClient.tools();
+    // console.log(
+    //   "asd>",
+    //   global_env.xtools.add.execute,
+    //   await global_env.xtools.add.execute(
+    //     { a: 12, b: 233 },
+    //     { messages: [], toolCallId: "1" }
+    //   )
+    // );
     // console.log("xtools", xtools);
     if (!env.OPENAI_API_KEY) {
       console.error(
@@ -50,7 +49,7 @@ export default {
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
     }
-    const response = await routeAgentRequest(request, { ...env, xtools });
+    const response = await routeAgentRequest(request, env);
     if (response) {
       if (request.headers.get("upgrade") === "websocket") {
         return response;

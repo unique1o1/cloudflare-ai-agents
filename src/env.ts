@@ -10,8 +10,3 @@ export type Env = {
   NEO4J_CACHE: DurableObjectNamespace<Neo4jCacheDO>;
   xtools: any;
 };
-export let global_env: Env = undefined as any;
-
-export function setEnv(env: Env) {
-  global_env = env;
-}

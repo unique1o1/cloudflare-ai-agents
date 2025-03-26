@@ -9,9 +9,6 @@ import {
 } from "ai";
 import { boolean, type z } from "zod";
 import { APPROVAL } from "./shared";
-import { global_env } from "./env";
-import { experimental_createMCPClient as createMCPClient } from "ai";
-import { agentContext } from "./chatagent";
 function isValidToolName<K extends PropertyKey, T extends object>(
   key: K,
   obj: T
@@ -40,11 +37,17 @@ export async function processToolCallss<
 >({
   dataStream,
   messages,
-  // executions,
+  executions,
 }: {
   tools: Tools; // used for type inference
   dataStream: DataStreamWriter;
   messages: Message[];
+  executions: {
+    [K in keyof Tools & keyof ExecutableTools]?: (
+      args: z.infer<ExecutableTools[K]["parameters"]>,
+      context: ToolExecutionOptions
+    ) => Promise<unknown>;
+  };
 }): Promise<Message[]> {
   console.error("------Parts-:", messages);
 
@@ -61,37 +64,33 @@ export async function processToolCallss<
       const { toolInvocation } = part;
       const toolName = toolInvocation.toolName;
 
-      console.log(
-        "--Tool invocation:",
-        toolInvocation,
-        Object.keys(global_env.xtools)
-      );
+      // console.log(
+      //   "--Tool invocation:",
+      //   toolInvocation,
+      //   Object.keys(global_env.xtools)
+      // );
       // Only continue if we have an execute function for the tool (meaning it requires confirmation) and it's in a 'result' state
-      if (
-        !(toolName in global_env.xtools) ||
-        toolInvocation.state !== "result"
-      ) {
+      if (!(toolName in executions) || toolInvocation.state !== "result") {
         return part;
       }
       let result: unknown;
 
       if (toolInvocation.result === APPROVAL.YES) {
         // Get the tool and check if the tool has an execute function.
+        if (
+          !isValidToolName(toolName, executions) ||
+          toolInvocation.state !== "result"
+        ) {
+          console.log(",,", toolInvocation.result);
 
-        const tool = global_env.xtools.add;
-        console.log(">MM>>", toolInvocation.args, tool);
-        if (tool) {
-          console.log(global_env.xtools.add.execute);
+          return part;
+        }
 
-          console.log(
-            "xxxx,",
-            await global_env.xtools.add.execute(
-              { a: 102, b: 23 },
-              { messages: [], toolCallId: "43" }
-            )
-          );
-          console.log("waiting--?");
-          result = await tool.execute(toolInvocation.args, {
+        const toolInstance = executions[toolName];
+        // const toolInstance = global_env.xtools[toolName];
+        if (toolInstance) {
+          console.log("--Tool instance000:", toolInstance);
+          result = await toolInstance(toolInvocation.args, {
             messages: convertToCoreMessages(messages),
             toolCallId: toolInvocation.toolCallId,
           });
@@ -109,7 +108,7 @@ export async function processToolCallss<
       dataStream.write(
         formatDataStreamPart("tool_result", {
           toolCallId: toolInvocation.toolCallId,
-          result: result + "my name is yunik",
+          result: result,
         })
       );
 
