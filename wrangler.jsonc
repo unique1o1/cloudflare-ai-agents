@@ -17,10 +17,6 @@
         "name": "Chat",
         "class_name": "Chat",
       },
-      {
-        "name": "NEO4J_CACHE",
-        "class_name": "Neo4jCacheDO",
-      },
     ],
   },
   "logpush": true,
@@ -28,7 +24,6 @@
     {
       "tag": "v1",
       "new_sqlite_classes": ["Chat"],
-      "new_classes": ["Neo4jCacheDO"],
     },
   ],
   "observability": {

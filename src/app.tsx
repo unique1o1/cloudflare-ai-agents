@@ -12,10 +12,11 @@ import { Switch } from "./components/ui/switch";
 import { Send, Bot, Trash2, Sun, Moon, Bug } from "lucide-react";
 
 // List of tools that require human confirmation
-const toolsRequiringConfirmation: (keyof typeof tools)[] = [
+const toolsRequiringConfirmation: any[] = [
   "getWeatherInformation",
   "add",
   "substract",
+  "getNeo4jData",
 ];
 
 export default function Chat() {
