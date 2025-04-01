@@ -7,7 +7,6 @@ import {
 } from "agents";
 
 import { type Env } from "./env";
-export { Neo4jCacheDO } from "./do";
 export { Chat } from "./chatagent";
 import { experimental_createMCPClient as createMCPClient } from "ai";
 

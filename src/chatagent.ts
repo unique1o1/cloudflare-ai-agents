@@ -5,7 +5,7 @@ import {
   type Agent,
   type Schedule,
 } from "agents";
-
+import { experimental_createMCPClient as createMCPClient } from "ai";
 import { unstable_getSchedulePrompt } from "agents/schedule";
 import "node:util";
 import * as util from "util";
@@ -38,6 +38,14 @@ export class Chat extends AIChatAgent<Env> {
     // Create a streaming response that handles both text and tool outputs
 
     return agentContext.run(this, async () => {
+      const mcpClient = await createMCPClient({
+        transport: {
+          type: "sse",
+          url: "https://yrifi-mcp-server.yirifi-ai.workers.dev/sse",
+        },
+      });
+
+      const xtools = await mcpClient.tools();
       const dataStreamResponse = createDataStreamResponse({
         execute: async (dataStream) => {
           this.dataStream = dataStream;
@@ -48,8 +56,8 @@ export class Chat extends AIChatAgent<Env> {
             messages: this.messages,
             dataStream,
             // tools: global_env.xtools,
-            tools,
-            executions,
+            xtools,
+            // executions,
           });
           console.log("xxxxxxx");
           console.log("Processed Messages", processedMessages);
@@ -88,7 +96,7 @@ export class Chat extends AIChatAgent<Env> {
              6.Explain query results in natural language`,
             messages: processedMessages,
             // tools: global_env.xtools,
-            tools: tools,
+            tools: xtools,
 
             onFinish: (x: any) => {
               // console.log("=======>Finished streaming:", x.steps);
