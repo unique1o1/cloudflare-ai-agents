@@ -4,13 +4,11 @@
  */
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "yirifi-ai-agent",
+  "name": "yirifi-agent",
   "main": "src/server.ts",
-  "compatibility_date": "2025-02-04",
+  "compatibility_date": "2025-04-17",
   "compatibility_flags": ["nodejs_compat"],
-  "assets": {
-    "directory": "public",
-  },
+
   "durable_objects": {
     "bindings": [
       {
