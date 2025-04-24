@@ -40,82 +40,68 @@ export async function processToolCallss({
   xtools: any;
 }): Promise<Message[]> {
   const lastMessage = messages[messages.length - 1];
-  const parts = lastMessage.parts;
-  if (!parts) return messages;
+  const part =
+    // lastMessage.parts?.[lastMessage.parts.length - 1];
+    // biome-ignore lint/complexity/useOptionalChain: <explanation>
+    lastMessage.parts && lastMessage.parts[lastMessage.parts.length - 1];
+  if (!part) return messages;
+  const processedpart = await (async () => {
+    console.log("parttype-", part.type);
+    if (part.type !== "tool-invocation") return part;
 
-  const processedParts = await Promise.all(
-    parts.map(async (part) => {
-      // Only process tool invocations parts
-      if (part.type !== "tool-invocation") return part;
+    const { toolInvocation } = part;
+    const toolName = toolInvocation.toolName;
 
-      const { toolInvocation } = part;
-      const toolName = toolInvocation.toolName;
+    // Only continue if we have an execute function for the tool (meaning it requires confirmation) and it's in a 'result' state
+    if (!(toolName in xtools) || toolInvocation.state !== "result") {
+      return part;
+    }
+    let result: unknown;
 
-      // Only continue if we have an execute function for the tool (meaning it requires confirmation) and it's in a 'result' state
-      if (!(toolName in xtools) || toolInvocation.state !== "result") {
-        return part;
-      }
-      let result: unknown;
+    if (toolInvocation.result === APPROVAL.YES) {
+      // Get the tool and check if the tool has an execute function.
 
-      if (toolInvocation.result === APPROVAL.YES) {
-        // Get the tool and check if the tool has an execute function.
-
-        const tool = xtools[toolName]!;
-        if (tool) {
-          console.log(xtools.add.execute);
-
-          console.log(
-            "xxxx,",
-            await tool.execute(
-              { a: 102, b: 23 },
-              { messages: [], toolCallId: "43" }
-            )
-          );
-          result = await tool.execute(toolInvocation.args, {
-            messages: convertToCoreMessages(messages),
-            toolCallId: toolInvocation.toolCallId,
-          });
-        } else {
-          result = "Error: No execute function found on tool";
-        }
-      } else if (toolInvocation.result === APPROVAL.NO) {
-        result = "Error: User denied access to tool execution";
-      } else {
-        // For any unhandled responses, return the original part.
-        return part;
-      }
-      console.log("--Tool result:", result);
-      // Forward updated tool result to the client.
-      dataStream.write(
-        formatDataStreamPart("tool_result", {
+      const tool = xtools[toolName]!;
+      if (tool) {
+        result = await tool.execute(toolInvocation.args, {
+          messages: convertToCoreMessages(messages),
           toolCallId: toolInvocation.toolCallId,
-          result: result,
-        })
-      );
-
-      // Return updated toolInvocation with the actual result.
-      return {
-        ...part,
-        toolInvocation: {
-          ...toolInvocation,
-          result,
-        },
-      };
-    })
-  );
-
+        });
+      } else {
+        result = "Error: No execute function found on tool";
+      }
+    } else if (toolInvocation.result === APPROVAL.NO) {
+      result = "Error: User denied access to tool execution";
+    } else {
+      // For any unhandled responses, return the original part.
+      return part;
+    }
+    console.log("tool result>", toolInvocation.toolCallId, result);
+    dataStream.write(
+      formatDataStreamPart("tool_result", {
+        toolCallId: toolInvocation.toolCallId,
+        result: result,
+      })
+    );
+    return {
+      ...part,
+      toolInvocation: {
+        ...toolInvocation,
+        result,
+      },
+    };
+  })();
   // Finally return the processed messages
-  return [...messages.slice(0, -1), { ...lastMessage, parts: processedParts }];
+  console.log("processedpart", processedpart);
+  return [
+    ...messages.slice(0, -1),
+    {
+      ...lastMessage,
+      parts: [
+        // @ts-ignore
+        ...lastMessage.parts.slice(0, -1),
+        processedpart,
+      ],
+    },
+  ];
 }
-
-// export function getToolsRequiringConfirmation<
-//   T extends ToolSet
-//   // E extends {
-//   //   [K in keyof T as T[K] extends { execute: Function } ? never : K]: T[K];
-//   // },
-// >(tools: T): string[] {
-//   return (Object.keys(tools) as (keyof T)[]).filter((key) => {
-//     const maybeTool = tools[key];
-//     return typeof maybeTool.execute !== "function";
-//   }) as string[];
-// }
